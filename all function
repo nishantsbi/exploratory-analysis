@@ -1,0 +1,306 @@
+#make plot1.png plot2.png plot3.png plot4.png plot5.png plot6.png
+#
+years <- c("1999", "2002", "2005", "2008")
+means <- vector() #initializing data
+for (i in years) {
+        means[i] <- mean(NEI$Emissions[which(NEI$year == i)], na.rm
+                         = TRUE)
+}
+#basic plot
+barplot(means, col = rainbow(20, start = 0, end = 1), main =
+                "Mean PM_2.5 emissions (Tons)")
+
+#
+means.baltimore <- vector() # preparing plot data
+for (i in years) {
+        means.baltimore[i] <- mean(NEI$Emissions[which(NEI$year ==
+                                                               i & NEI$fips ==
+                                                               "24510")], na.rm = TRUE)
+}
+#basic plot
+barplot(means.baltimore, col = terrain.colors(2), main = "Mean
+PM_2.5 emissions (Tons)\n in Baltimore city")
+
+#
+data.baltimore <- NEI[which((NEI$fips == "24510") &
+                                    (NEI$Emissions < 1000)),
+                      ] #initializing data
+# plotting:
+install.packages("ggplot2")
+require("ggplot2")
+## Loading required package: ggplot2
+g2 <- ggplot(data.baltimore, aes(year, Emissions))
+g2 + geom_point(aes(color = type), size = 10, alpha = 0.3) +
+        facet_grid(. ~
+                           type) + geom_smooth(size = 2, color = "black", linetype =
+                                                       1, method = "lm",
+                                               se = FALSE)
+
+
+#
+# creating plot data:
+d.tmp1 <- NEI[NEI$SCC %in% SCC[grep("Coal", SCC$EI.Sector), 1],] 
+d.tmp2 <- SCC[, c(1, 4)]
+data.coal <- merge(d.tmp1, d.tmp2, by.x = "SCC", by.y = "SCC")[, c(4, 6, 7)]
+# plotting:
+require("ggplot2")
+g4 <- ggplot(data.coal, aes(x = year, y = Emissions))
+g4 + geom_point(aes(color = EI.Sector), size = 10, alpha = 0.3)
++ facet_grid(. ~
+                     EI.Sector) + geom_smooth(size = 2, color = "black",
+                                              linetype = 1, method = "lm",
+                                              se = FALSE)
+#
+# reorganizing plot data:
+d.tmp1 <- NEI[NEI$SCC %in% SCC[grep("Mobile", SCC$EI.Sector),
+                               1], ]
+d.tmp3 <- d.tmp1[which(d.tmp1$fips == "24510"), ]
+d.tmp2 <- SCC[, c(1, 4)]
+d5 <- merge(d.tmp3, d.tmp2, by.x = "SCC", by.y = "SCC")[, c(4,
+                                                            6, 7)]
+# removing outliers and sources out of our interest:
+d5[d5$Emissions > 15, ] <- NA
+d5 <- d5[which(d5$EI.Sector != "Mobile - Commercial Marine
+Vessels"), ]
+d5 <- d5[which(d5$EI.Sector != "Mobile - Aircraft"), ]
+# plotting:
+install.packages("lattice")
+require("lattice")
+## Loading required package: lattice
+xyplot(Emissions ~ year | EI.Sector, d5, layout = c(4, 2), ylab
+       = "Emissions",
+       xlab = "years", panel = function(x, y) {
+               panel.xyplot(x, y)
+               panel.lmline(x, y, lty = 1, col = "red")
+               par.strip.text = list(cex = 0.8)
+       }, as.table = T)
+
+
+# reorganizing plot data:
+data <- rbind(d.baltim <- NEI[which(NEI$fips == "24510"), ],
+              d.lac <- NEI[which(NEI$fips ==
+                                         "06037"), ])
+data$fips[which(data$fips == "24510")] <- "Baltimore City"
+data$fips[which(data$fips == "06037")] <- "Los Angeles County"
+names(data)[1] <- "Cities"
+# plotting:
+require("ggplot2")
+g6 <- ggplot(data, aes(x = year, y = Emissions, fill = Cities))
+g6 + geom_bar(stat = "identity", position = position_dodge())
+
+
+
+#Rplot1.R
+# Exploratory Data Analysis - Assignment 2 - Q. #1
+# Ron Mashrouteh May 23, 2014
+
+# Loading provided datasets - loading from local machine
+NEI <- readRDS("./Data for Peer Assessment/summarySCC_PM25.rds")#这儿的地址是我的本机地址！
+SCC <- readRDS("./Data for Peer Assessment/Source_Classification_Code.rds")#这儿的地址是我的本机地址！
+
+# Sampling
+NEI_sampling <- NEI[sample(nrow(NEI), size=2000, replace=F), ]
+
+# Aggregate
+Emissions <- aggregate(NEI[, 'Emissions'], by=list(NEI$year), FUN=sum)
+Emissions$PM <- round(Emissions[,2]/1000,2)
+
+# Have total emissions from PM2.5 decreased in the United States from 1999 
+#to 2008? 
+# Using the base plotting system, make a plot showing the total PM2.5 
+#emission from all sources 
+# for each of the years 1999, 2002, 2005, and 2008.
+
+# Generate the graph in the same directory as the source code
+png(filename='./Data for Peer Assessment/plot1.png')
+
+barplot(Emissions$PM, names.arg=Emissions$Group.1, 
+        main=expression('Total Emission of PM'[2.5]),
+        xlab='Year', ylab=expression(paste('PM', ''[2.5], ' in Kilotons')))
+
+dev.off()
+
+#Rplot2.R
+# Exploratory Data Analysis - Assignment 2 - Q. #2
+# Ron Mashrouteh May 23, 2014
+
+# Loading provided datasets - loading from local machine
+NEI <- readRDS("./Data for Peer Assessment/summarySCC_PM25.rds")
+SCC <- readRDS("./Data for Peer Assessment/Source_Classification_Code.rds")
+
+# Sampling
+NEI_sampling <- NEI[sample(nrow(NEI), size=5000, replace=F), ]
+
+# Subset data and append two years in one data frame
+MD <- subset(NEI, fips=='24510')
+
+# Have total emissions from PM2.5 decreased in the Baltimore City, Maryland 
+#(fips == "24510") 
+# from 1999 to 2008? Use the base plotting system to make a plot answering 
+#this question.
+
+# Generate the graph in the same directory as the source code
+png(filename='~/Data for Peer Assessment/plot2.png')
+
+barplot(tapply(X=MD$Emissions, INDEX=MD$year, FUN=sum), 
+        main='Total Emission in Baltimore City, MD', 
+        xlab='Year', ylab=expression('PM'[2.5]))
+
+dev.off()
+
+
+#Rplot3.R
+# Exploratory Data Analysis - Assignment 2 - Q. #3
+# Ron Mashrouteh May 23, 2014
+
+# Load ggplot2 library
+install.packages("ggplot2")
+require(ggplot2)
+
+# Loading provided datasets - loading from local machine
+NEI <- readRDS("./Data for Peer Assessment/summarySCC_PM25.rds")
+SCC <- readRDS("./Data for Peer Assessment/Source_Classification_Code.rds")
+
+# Sampling
+NEI_sampling <- NEI[sample(nrow(NEI), size=5000, replace=F), ]
+
+# Baltimore City, Maryland == fips
+MD <- subset(NEI, fips == 24510)
+MD$year <- factor(MD$year, levels=c('1999', '2002', '2005', '2008'))
+
+# Of the four types of sources indicated by the type (point, nonpoint, onroad, nonroad) variable, 
+# which of these four sources have seen decreases in emissions from 1999–2008 for Baltimore City? 
+# Which have seen increases in emissions from 1999–2008? 
+# Use the ggplot2 plotting system to make a plot answer this question.
+
+# Generate the graph in the same directory as the source code
+png(filename='./Data for Peer Assessment/plot3.png', 
+    width=800, height=500, units='px')
+
+ggplot(data=MD, aes(x=year, y=log(Emissions))) + facet_grid(. ~ type) + 
+        guides(fill=F) +
+        geom_boxplot(aes(fill=type)) + stat_boxplot(geom ='errorbar') +
+        ylab(expression(paste('Log', ' of PM'[2.5], ' Emissions'))) + xlab
+('Year') + 
+        ggtitle('Emissions per Type in Baltimore City, Maryland') +
+        geom_jitter(alpha=0.10)
+
+dev.off()
+
+#Rplot4.R
+# Exploratory Data Analysis - Assignment 2 - Q. #4
+# Ron Mashrouteh May 23, 2014
+
+# Load ggplot2 library
+require(ggplot2)
+
+# Loading provided datasets - loading from local machine
+NEI <- readRDS("./Data for Peer Assessment/summarySCC_PM25.rds")
+SCC <- readRDS("./Data for Peer Assessment/Source_Classification_Code.rds")
+
+# Coal combustion related sources
+SCC.coal = SCC[grepl("coal", SCC$Short.Name, ignore.case=TRUE),]
+
+# Merge two data sets
+merge <- merge(x=NEI, y=SCC.coal, by='SCC')
+merge.sum <- aggregate(merge[, 'Emissions'], by=list(merge$year), sum)
+colnames(merge.sum) <- c('Year', 'Emissions')
+
+# Across the United States, how have emissions from coal combustion-related sources 
+# changed from 1999-2008?
+
+# Generate the graph in the same directory as the source code
+png(filename='~/Exploratory_Data_Analysis/Assignment_2/plot4.png')
+
+ggplot(data=merge.sum, aes(x=Year, y=Emissions/1000)) + 
+        geom_line(aes(group=1, col=Emissions)) + geom_point(aes(size=2, 
+                                                                col=Emissions)) + 
+        ggtitle(expression('Total Emissions of PM'[2.5])) + 
+        ylab(expression(paste('PM', ''[2.5], ' in kilotons'))) + 
+        geom_text(aes(label=round(Emissions/1000,digits=2), size=2, hjust=1.5, 
+                      vjust=1.5)) + 
+        theme(legend.position='none') + scale_colour_gradient(low='black', 
+                                                              high='red')
+
+dev.off()
+
+
+#Rplot5.R
+# Exploratory Data Analysis - Assignment 2 - Q. #5
+# Ron Mashrouteh May 23, 2014
+
+# Load ggplot2 library
+library(ggplot2)
+
+# Loading provided datasets - loading from local machine
+NEI <- readRDS("./Data for Peer Assessment/summarySCC_PM25.rds")
+SCC <- readRDS("./Data for Peer Assessment/Source_Classification_Code.rds")
+
+NEI$year <- factor(NEI$year, levels=c('1999', '2002', '2005', '2008'))
+
+# Baltimore City, Maryland == fips
+MD.onroad <- subset(NEI, fips == 24510 & type == 'ON-ROAD')
+
+# Aggregate
+MD.df <- aggregate(MD.onroad[, 'Emissions'], by=list(MD.onroad$year), sum)
+colnames(MD.df) <- c('year', 'Emissions')
+
+# How have emissions from motor vehicle sources changed from 1999-2008 in Baltimore City? 
+
+# Generate the graph in the same directory as the source code
+png('~/Exploratory_Data_Analysis/Assignment_2/plot5.png')
+
+ggplot(data=MD.df, aes(x=year, y=Emissions)) + geom_bar(aes(fill=year)) + 
+        guides(fill=F) + 
+        ggtitle('Total Emissions of Motor Vehicle Sources in Baltimore City, 
+                Maryland') + 
+        ylab(expression('PM'[2.5])) + xlab('Year') + theme
+(legend.position='none') + 
+        geom_text(aes(label=round(Emissions,0), size=1, hjust=0.5, vjust=2))
+
+dev.off()
+
+#Rplot6.R
+# Exploratory Data Analysis - Assignment 2 - Q. #6
+# Ron Mashrouteh May 23, 2014
+
+# Load ggplot2 library
+library(ggplot2)
+
+NEI <- readRDS("./Data for Peer Assessment/summarySCC_PM25.rds")
+SCC <- readRDS("./Data for Peer Assessment/Source_Classification_Code.rds")
+
+NEI$year <- factor(NEI$year, levels=c('1999', '2002', '2005', '2008'))
+
+# Baltimore City, Maryland
+# Los Angeles County, California
+MD.onroad <- subset(NEI, fips == '24510' & type == 'ON-ROAD')
+CA.onroad <- subset(NEI, fips == '06037' & type == 'ON-ROAD')
+
+# Aggregate
+MD.DF <- aggregate(MD.onroad[, 'Emissions'], by=list(MD.onroad$year), sum)
+colnames(MD.DF) <- c('year', 'Emissions')
+MD.DF$City <- paste(rep('MD', 4))
+
+CA.DF <- aggregate(CA.onroad[, 'Emissions'], by=list(CA.onroad$year), sum)
+colnames(CA.DF) <- c('year', 'Emissions')
+CA.DF$City <- paste(rep('CA', 4))
+
+DF <- as.data.frame(rbind(MD.DF, CA.DF))
+
+# Compare emissions from motor vehicle sources in Baltimore City with emissions from motor vehicle sources 
+# in Los Angeles County, California (fips == 06037). Which city has seen greater changes over time 
+# in motor vehicle emissions?
+
+# Generate the graph in the same directory as the source code
+png('~/Exploratory_Data_Analysis/Assignment_2/plot6.png')
+
+ggplot(data=DF, aes(x=year, y=Emissions)) + geom_bar(aes(fill=year)) + 
+        guides(fill=F) + 
+        ggtitle('Total Emissions of Motor Vehicle Sources\nLos Angeles County, 
+                California vs. Baltimore City, Maryland') + 
+        ylab(expression('PM'[2.5])) + xlab('Year') + theme
+(legend.position='none') + facet_grid(. ~ City) + 
+        geom_text(aes(label=round(Emissions,0), size=1, hjust=0.5, vjust=-1))
+
+dev.off()
